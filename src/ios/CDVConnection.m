@@ -36,6 +36,29 @@
     [self sendPluginResult];
 }
 
+- (void)getCurrentNetAvailableWithHostName:(CDVInvokedUrlCommand *)command
+{
+    [self.commandDelegate runInBackground:^{
+      
+        NetworkStatus networkStatus = [self.hostReach currentReachabilityStatus];
+        BOOL netAvailable = true;
+        
+        switch (networkStatus) {
+            case NotReachable:
+            {
+                netAvailable = false;
+                break;
+            }
+            default: {
+                netAvailable = true;
+                break;
+            }
+        }
+        CDVPluginResult * result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString: [NSString stringWithFormat:@"%d", netAvailable]];
+        [self.commandDelegate sendPluginResult: result callbackId:command.callbackId];
+    }];
+}
+
 - (void)sendPluginResult
 {
     CDVPluginResult* result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:self.connectionType];
@@ -135,12 +158,28 @@
 - (void)onPause
 {
     [self.internetReach stopNotifier];
+    if (self.hostReach) {
+        [self.hostReach stopNotifier];
+    }
 }
 
 - (void)onResume
 {
+    if (self.hostReach) {
+        [self.hostReach startNotifier];
+    }
     [self.internetReach startNotifier];
     [self updateReachability:self.internetReach];
+}
+
+-(void)initHostReachWithHostName:(CDVInvokedUrlCommand *)command
+{
+    NSArray *arguments = command.arguments;
+    NSString *hostName = [arguments count] > 0 ? arguments[0] : @"";
+    self.hostReach = [CDVReachability reachabilityWithHostName:hostName];
+    [self.hostReach startNotifier];
+    CDVPluginResult * result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString: @"Init host reach success"];
+    [self.commandDelegate sendPluginResult: result callbackId:command.callbackId];
 }
 
 - (void)pluginInitialize

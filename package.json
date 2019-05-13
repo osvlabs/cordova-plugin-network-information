@@ -1,10 +1,10 @@
 {
-  "name": "cordova-plugin-network-information",
-  "version": "2.0.2-dev",
+  "name": "@osvlabs/cordova-plugin-network-information",
+  "version": "2.0.3",
   "description": "Cordova Network Information Plugin",
   "types": "./types/index.d.ts",
   "cordova": {
-    "id": "cordova-plugin-network-information",
+    "id": "cordova-plugin-network-information-zz",
     "platforms": [
       "android",
       "ios",
@@ -14,7 +14,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/apache/cordova-plugin-network-information"
+    "url": "https://github.com/osvlabs/cordova-plugin-network-information"
   },
   "bugs": {
     "url": "https://issues.apache.org/jira/browse/CB"

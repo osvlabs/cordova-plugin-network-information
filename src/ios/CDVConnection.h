@@ -30,5 +30,10 @@
 
 @property (copy) NSString* connectionType;
 @property (strong) CDVReachability* internetReach;
+@property (nonatomic, strong)CDVReachability* hostReach;
+
+- (void)getCurrentNetAvailableWithHostName:(CDVInvokedUrlCommand *)command;
+
+- (void)initHostReachWithHostName:(CDVInvokedUrlCommand *)command;
 
 @end

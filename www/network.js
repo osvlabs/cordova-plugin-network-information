@@ -48,6 +48,14 @@ NetworkConnection.prototype.getInfo = function (successCallback, errorCallback) 
     exec(successCallback, errorCallback, 'NetworkStatus', 'getConnectionInfo', []);
 };
 
+NetworkConnection.prototype.getCurrentNetAvailable = function (successCallback, errorCallback) {
+    exec(successCallback, errorCallback, 'NetworkStatus', 'getCurrentNetAvailableWithHostName', []);   
+};
+
+NetworkConnection.prototype.initHostReach = function (hostName, successCallback, errorCallback) {
+    exec(successCallback, errorCallback, 'NetworkStatus', 'initHostReachWithHostName', [[hostName]]);  
+};
+
 var me = new NetworkConnection();
 var timerId = null;
 var timeout = 500;
