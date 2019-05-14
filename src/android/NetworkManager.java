@@ -18,6 +18,8 @@
 */
 package org.apache.cordova.networkinformation;
 
+import android.net.Network;
+import android.util.Log;
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaInterface;
 import org.apache.cordova.CordovaPlugin;
@@ -36,6 +38,13 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Build;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.Locale;
 
 public class NetworkManager extends CordovaPlugin {
@@ -80,6 +89,8 @@ public class NetworkManager extends CordovaPlugin {
     public static final String TYPE_4G = "4g";
     public static final String TYPE_NONE = "none";
 
+    public static final String ACTION_INIT_REACH = "initHostReachWithHostName";
+
     private static final String LOG_TAG = "NetworkManager";
 
     private CallbackContext connectionCallbackContext;
@@ -106,10 +117,10 @@ public class NetworkManager extends CordovaPlugin {
     /**
      * Executes the request and returns PluginResult.
      *
-     * @param action            The action to execute.
-     * @param args              JSONArry of arguments for the plugin.
-     * @param callbackContext   The callback id used when calling back into JavaScript.
-     * @return                  True if the action was valid, false otherwise.
+     * @param action          The action to execute.
+     * @param args            JSONArry of arguments for the plugin.
+     * @param callbackContext The callback id used when calling back into JavaScript.
+     * @return True if the action was valid, false otherwise.
      */
     public boolean execute(String action, JSONArray args, CallbackContext callbackContext) {
         if (action.equals("getConnectionInfo")) {
@@ -126,6 +137,11 @@ public class NetworkManager extends CordovaPlugin {
             pluginResult.setKeepCallback(true);
             callbackContext.sendPluginResult(pluginResult);
             return true;
+        } else if (action.equals(ACTION_INIT_REACH)) {
+            String hostName = args.optString(0);
+            Boolean available = this.initHostReachWithHostName(hostName);
+            PluginResult pluginResult = new PluginResult(PluginResult.Status.OK, available);
+            callbackContext.sendPluginResult(pluginResult);
         }
         return false;
     }
@@ -168,7 +184,7 @@ public class NetworkManager extends CordovaPlugin {
                     }
 
                     String connectionType = null;
-                    if(NetworkManager.this.lastInfo == null) {
+                    if (NetworkManager.this.lastInfo == null) {
                         connectionType = TYPE_NONE;
                     } else {
                         try {
@@ -180,10 +196,10 @@ public class NetworkManager extends CordovaPlugin {
                     }
 
                     // Lollipop always returns false for the EXTRA_NO_CONNECTIVITY flag => fix for Android M and above.
-                    if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && TYPE_NONE.equals(connectionType)) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && TYPE_NONE.equals(connectionType)) {
                         boolean noConnectivity = intent.getBooleanExtra(ConnectivityManager.EXTRA_NO_CONNECTIVITY, false);
                         LOG.d(LOG_TAG, "Intent no connectivity: " + noConnectivity);
-                        if(noConnectivity) {
+                        if (noConnectivity) {
                             LOG.d(LOG_TAG, "Really no connectivity");
                         } else {
                             LOG.d(LOG_TAG, "!!! Switching to unknown, Intent states there is a connectivity.");
@@ -219,8 +235,7 @@ public class NetworkManager extends CordovaPlugin {
         // send update to javascript "navigator.network.connection"
         // Jellybean sends its own info
         JSONObject thisInfo = this.getConnectionInfo(info);
-        if(!thisInfo.equals(lastInfo))
-        {
+        if (!thisInfo.equals(lastInfo)) {
             String connectionType = "";
             try {
                 connectionType = thisInfo.get("type").toString();
@@ -246,8 +261,7 @@ public class NetworkManager extends CordovaPlugin {
             // If we are not connected to any network set type to none
             if (!info.isConnected()) {
                 type = TYPE_NONE;
-            }
-            else {
+            } else {
                 type = getType(info);
             }
             extraInfo = info.getExtraInfo();
@@ -296,39 +310,62 @@ public class NetworkManager extends CordovaPlugin {
             LOG.d(LOG_TAG, "wifi : " + WIFI);
             if (type.equals(WIFI)) {
                 return TYPE_WIFI;
-            }
-            else if (type.toLowerCase().equals(TYPE_ETHERNET) || type.toLowerCase().startsWith(TYPE_ETHERNET_SHORT)) {
+            } else if (type.toLowerCase().equals(TYPE_ETHERNET) || type.toLowerCase().startsWith(TYPE_ETHERNET_SHORT)) {
                 return TYPE_ETHERNET;
-            }
-            else if (type.equals(MOBILE) || type.equals(CELLULAR)) {
+            } else if (type.equals(MOBILE) || type.equals(CELLULAR)) {
                 type = info.getSubtypeName().toLowerCase(Locale.US);
                 if (type.equals(GSM) ||
-                    type.equals(GPRS) ||
-                    type.equals(EDGE) ||
-                    type.equals(TWO_G)) {
+                        type.equals(GPRS) ||
+                        type.equals(EDGE) ||
+                        type.equals(TWO_G)) {
                     return TYPE_2G;
-                }
-                else if (type.startsWith(CDMA) ||
-                    type.equals(UMTS) ||
-                    type.equals(ONEXRTT) ||
-                    type.equals(EHRPD) ||
-                    type.equals(HSUPA) ||
-                    type.equals(HSDPA) ||
-                    type.equals(HSPA) ||
-                    type.equals(THREE_G)) {
+                } else if (type.startsWith(CDMA) ||
+                        type.equals(UMTS) ||
+                        type.equals(ONEXRTT) ||
+                        type.equals(EHRPD) ||
+                        type.equals(HSUPA) ||
+                        type.equals(HSDPA) ||
+                        type.equals(HSPA) ||
+                        type.equals(THREE_G)) {
                     return TYPE_3G;
-                }
-                else if (type.equals(LTE) ||
-                    type.equals(UMB) ||
-                    type.equals(HSPA_PLUS) ||
-                    type.equals(FOUR_G)) {
+                } else if (type.equals(LTE) ||
+                        type.equals(UMB) ||
+                        type.equals(HSPA_PLUS) ||
+                        type.equals(FOUR_G)) {
                     return TYPE_4G;
                 }
             }
-        }
-        else {
+        } else {
             return TYPE_NONE;
         }
         return TYPE_UNKNOWN;
     }
+
+    public boolean initHostReachWithHostName(String hostName) {
+        Context context = cordova.getActivity().getApplicationContext();
+        ConnectivityManager cm = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo netInfo = cm.getActiveNetworkInfo();
+        if (netInfo != null && netInfo.isConnected()) {
+            try {
+                URL url = new URL(hostName);
+                HttpURLConnection urlc = (HttpURLConnection) url.openConnection();
+                // 5 s.
+                urlc.setConnectTimeout(5 * 1000);
+                urlc.connect();
+                // 200 = "OK" code (http connection is fine).
+                if (urlc.getResponseCode() > 0) {
+                    Log.wtf("Connection", "Success !");
+                    return true;
+                } else {
+                    return false;
+                }
+            } catch (MalformedURLException e1) {
+                return false;
+            } catch (IOException e) {
+                return false;
+            }
+        }
+        return false;
+    }
+
 }
