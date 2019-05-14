@@ -37,7 +37,7 @@ wifi connection, and whether the device has an internet connection.
 
 ## Installation
 
-    cordova plugin add cordova-plugin-network-information
+    ionic cordova plugin add @osvlabs/cordova-plugin-network-information@latest
 
 ## Supported Platforms
 
