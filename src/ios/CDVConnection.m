@@ -177,7 +177,7 @@
     NSArray *arguments = command.arguments;
     NSString *hostName = [arguments count] > 0 ? arguments[0] : @"";
     self.hostReach = [CDVReachability reachabilityWithHostName:hostName];
-    [self.hostReach startNotifier];
+    // [self.hostReach startNotifier];
     CDVPluginResult * result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString: @"Init host reach success"];
     [self.commandDelegate sendPluginResult: result callbackId:command.callbackId];
 }
